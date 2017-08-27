@@ -18,6 +18,9 @@
 
   :dependencies [[org.clojure/clojure]
 
+                 [puppetlabs/comidi]
+                 [puppetlabs/ring-middleware]
+
                  [puppetlabs/trapperkeeper]
                  [puppetlabs/trapperkeeper-webserver-jetty9]
                  [puppetlabs/jruby-utils "0.10.0"]]

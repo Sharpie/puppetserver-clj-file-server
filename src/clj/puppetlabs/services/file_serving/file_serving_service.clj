@@ -12,16 +12,28 @@
 
 (defservice file-serving-service
   FileServingService
-  [[:WebroutingService]
+  [[:WebserverService add-ring-handler]
    [:JRubyPuppetService]]
   (init [this context]
     (log/info "Initializing FileServing service")
-    (assoc context
-           :environments (atom {})
-           :ruby-mounts (atom [])
-           :jruby-service (services/get-service this :JRubyPuppetService)))
+    (let [context (assoc context
+                         :environments (atom {})
+                         :ruby-mounts (atom [])
+                         :jruby-service (services/get-service this :JRubyPuppetService))]
+
+      ;; Mounts a router that responds to /file-serving:
+      ;;
+      ;;   GET    -> Return currently registered environments and mount points.
+      ;;   DELETE -> Update environments and mount points.
+      (add-ring-handler (core/admin-handler context) "/")
+
+      context))
+
   (start [this context]
     (log/info "Starting FileServing service")
+
+    ;; Sync state of environments and mountpoints now that dependent services
+    ;; have started.
     (core/refresh-jruby-state! context)
 
     (log/info (with-out-str
