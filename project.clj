@@ -14,11 +14,13 @@
                    :inherit [:managed-dependencies]}
 
   :source-paths ["src/clj"]
+  :resource-paths ["src/ruby"]
 
   :dependencies [[org.clojure/clojure]
 
                  [puppetlabs/trapperkeeper]
-                 [puppetlabs/trapperkeeper-webserver-jetty9]]
+                 [puppetlabs/trapperkeeper-webserver-jetty9]
+                 [puppetlabs/jruby-utils "0.10.0"]]
 
   :profiles {:dev {:source-paths ["dev"]
                    :repl-options {:init-ns tk-devtools}
