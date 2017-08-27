@@ -20,7 +20,13 @@
     context)
   (start [this context]
     (log/info "Starting FileServing service")
-    (jruby/run-script! this "say_hello.rb")
+    (log/info (with-out-str
+                (clojure.pprint/pprint
+                  (jruby/run-script! this "file_serving_shims/get_environments.rb"))))
+
+    (log/info (with-out-str
+                (clojure.pprint/pprint
+                  (jruby/run-script! this "file_serving_shims/get_mounts.rb"))))
     context)
   (stop [this context]
     (log/info "Shutting down FileServing service")
