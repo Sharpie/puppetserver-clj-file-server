@@ -18,6 +18,8 @@
 
   :dependencies [[org.clojure/clojure]
 
+                 [ring/ring-core]
+
                  [puppetlabs/comidi]
                  [puppetlabs/ring-middleware]
 

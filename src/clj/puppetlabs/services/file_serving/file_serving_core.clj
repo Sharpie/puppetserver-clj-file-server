@@ -1,8 +1,11 @@
 (ns puppetlabs.services.file-serving.file-serving-core
   (:require
+   [clojure.java.io :as io]
    [puppetlabs.comidi :as comidi]
    [puppetlabs.ring-middleware.utils :as request-utils]
-   [puppetlabs.bodgery.jruby :as jruby])
+   [puppetlabs.bodgery.jruby :as jruby]
+   [ring.middleware.params :as params]
+   [ring.util.response :as response])
   (:import
    (org.eclipse.jetty.servlet ServletContextHandler ServletHolder DefaultServlet)
    (org.eclipse.jetty.util.resource ResourceCollection)))
@@ -68,3 +71,53 @@
                     (info-handler request))
         (comidi/DELETE "/file-serving" request
                        (refresh-handler request))))))
+
+
+;; File Utilities
+(defn find-in-modulepath
+  "Walks a modulepath and returns a path to the first existing file entry
+  or nil if no existing file is found."
+  [modulepath infix path]
+  (some
+    #(let [test-file (->> (clojure.string/replace-first path "/" "")
+                          (io/file % infix))]
+       (if (.exists test-file) (.toString test-file)))
+    modulepath))
+
+(defn file-response
+  [file]
+  (let [response (response/file-response
+                   file
+                   {:allow-symlinks? true :index-files? false :root false})]
+    (assoc-in response [:headers "Content-Type"] "application/octet-stream")))
+
+;; File Content API
+
+(defn module-file-handler
+  [context]
+  (fn [request]
+    ;; FIXME: Lots of stuff not handled below. Ensure environment is present as
+    ;; a query parameter. Ensure the requested environment is present in our
+    ;; context.
+    (let [environment (get-in request [:params "environment"])
+          module (get-in request [:route-params :module])
+          path (get-in request [:route-params :path])
+          modulepath (get-in @(:environments context) [environment "modulepath"])
+          file (find-in-modulepath modulepath (str module "/files") path)]
+      (if file
+        (file-response file)
+        (let [msg (str "Not Found: Could not find file_content modules/" (str module path))]
+          (request-utils/json-response
+            404
+            {:message msg :issue_kind "RESOURCE_NOT_FOUND"}))))))
+
+(defn file-content-handler
+  [context]
+  (let [module-handler (module-file-handler context)]
+    (-> (comidi/routes
+          (comidi/context "/puppet/v3/file_content"
+            (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
+                        (module-handler request))))
+
+        comidi/routes->handler
+        params/wrap-params)))

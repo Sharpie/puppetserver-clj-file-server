@@ -26,6 +26,7 @@
       ;;   GET    -> Return currently registered environments and mount points.
       ;;   DELETE -> Update environments and mount points.
       (add-ring-handler (core/admin-handler context) "/")
+      (add-ring-handler (core/file-content-handler context) "/puppet/v3/file_content")
 
       context))
 
