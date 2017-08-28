@@ -79,7 +79,7 @@
   or nil if no existing file is found."
   [modulepath infix path]
   (some
-    #(let [test-file (->> (clojure.string/replace-first path "/" "")
+    #(let [test-file (->> (clojure.string/replace-first path #"^/" "")
                           (io/file % infix))]
        (if (.exists test-file) (.toString test-file)))
     modulepath))
@@ -90,6 +90,15 @@
                    file
                    {:allow-symlinks? true :index-files? false :root false})]
     (assoc-in response [:headers "Content-Type"] "application/octet-stream")))
+
+(defn subdirs
+  "Return all subdirectories of a path."
+  [path]
+  (->> path
+       io/file
+       .listFiles
+       (filter #(.isDirectory %))
+       (map #(.toString %))))
 
 ;; File Content API
 
@@ -111,13 +120,34 @@
             404
             {:message msg :issue_kind "RESOURCE_NOT_FOUND"}))))))
 
+(defn module-plugin-handler
+  [context plugin-path]
+  (fn [request]
+    (let [environment (get-in request [:params "environment"])
+          path (get-in request [:route-params :path])
+          modulepath (get-in @(:environments context) [environment "modulepath"])
+          moduledirs (mapcat subdirs modulepath)
+          file (find-in-modulepath moduledirs plugin-path path)]
+      (if file
+        (file-response file)
+        (let [msg (str "Not Found: Could not find plugin " plugin-path "/" path)]
+          (request-utils/json-response
+            404
+            {:message msg :issue_kind "RESOURCE_NOT_FOUND"}))))))
+
 (defn file-content-handler
   [context]
-  (let [module-handler (module-file-handler context)]
+  (let [module-handler (module-file-handler context)
+        plugin-handler (module-plugin-handler context "lib")
+        pluginfact-handler (module-plugin-handler context "facts.d")]
     (-> (comidi/routes
           (comidi/context "/puppet/v3/file_content"
             (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
-                        (module-handler request))))
+                        (module-handler request))
+            (comidi/GET ["/plugins/" [#".*" :path]] request
+                        (plugin-handler request))
+            (comidi/GET ["/pluginfacts/" [#".*" :path]] request
+                        (pluginfact-handler request))))
 
         comidi/routes->handler
         params/wrap-params)))
