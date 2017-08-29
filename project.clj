@@ -18,6 +18,8 @@
 
   :dependencies [[org.clojure/clojure]
 
+                 [commons-codec]
+
                  [ring/ring-core]
 
                  [puppetlabs/comidi]

@@ -7,6 +7,8 @@
    [ring.middleware.params :as params]
    [ring.util.response :as response])
   (:import
+   (java.nio.file Files LinkOption)
+   (org.apache.commons.codec.digest DigestUtils)
    (org.eclipse.jetty.servlet ServletContextHandler ServletHolder DefaultServlet)
    (org.eclipse.jetty.util.resource ResourceCollection)))
 
@@ -74,6 +76,107 @@
 
 
 ;; File Utilities
+
+(def links-follow
+  "Functions in the java.nio namespace default to following links,
+  so an empty array of options suffices."
+  (into-array LinkOption []))
+
+(def links-nofollow
+  "An array of LinkOptions which prevents symlinks from being followed."
+  (into-array LinkOption [LinkOption/NOFOLLOW_LINKS]))
+
+(def unix-attributes
+  "A string of 'Unix' FileAttributes to read. Oddly, these are not in the
+  official Java 8 docs. However, they work and seem to be the quickest
+  means of getting items like numeric uid, gid and file modes."
+  "unix:mode,uid,gid,creationTime,lastModifiedTime,isDirectory,isRegularFile,isSymbolicLink")
+
+(defn file-attributes
+  "Takes a string path and determines file information such as ownership,
+  access times and permissions."
+  ([path]
+   (file-attributes path false))
+  ([path follow-links?]
+   (let [path (-> path io/as-file .toPath)
+         link-behavior (if follow-links? links-follow links-nofollow)]
+     (Files/readAttributes path unix-attributes link-behavior))))
+
+(defn attributes->mode
+  "Extracts a file mode from a Files/readAttributes result."
+  [attributes]
+  (-> attributes
+      (get "mode")
+      (bit-and 07777)))
+
+(defn attributes->type
+  "Extracts the file type from a Files/readAttributes result."
+  [attributes]
+  (cond
+    (get attributes "isRegularFile") :file
+    (get attributes "isDirectory") :directory
+    (get attributes "isSymbolicLink") :link
+    :else :other))
+
+(defn readlink
+  [path]
+  (-> path
+      io/as-file
+      .toPath
+      Files/readSymbolicLink
+      .toString))
+
+;; TODO: Figure out how to handle "lite" versions of each hash function.
+(defn file-digest
+  [path checksum-type]
+  (with-open [input (io/input-stream path)]
+    (case checksum-type
+      "md5" (DigestUtils/md5Hex input)
+      "sha1" (DigestUtils/sha1Hex input)
+      "sha256" (DigestUtils/sha256Hex input))))
+
+(defn file-checksum
+  [path attributes checksum-type]
+  (case checksum-type
+    "none" {:type "none"
+            :value "{none}"}
+    "ctime" {:type "ctime"
+             :value (str "{ctime}" (get attributes "creationTime"))}
+    "mtime" {:type "mtime"
+             :value (str "{mtime}" (get attributes "lastModifiedTime"))}
+    ;; Default case.
+    {:type checksum-type
+     :value (str "{" checksum-type "}"
+                 (file-digest path checksum-type))}))
+
+(defn file-metadata
+  ([path]
+   (file-metadata path "md5" false))
+  ([path checksum-type follow-links?]
+    (let [attributes (file-attributes path follow-links?)
+          follow (if follow-links? "follow" "manage")
+          base-attributes {:path path
+                           :relative_path nil
+                           :destination nil
+                           :owner (get attributes "uid")
+                           :group (get attributes "gid")
+                           :mode (attributes->mode attributes)
+                           :follow follow}]
+      (case (attributes->type attributes)
+
+        :file (assoc base-attributes
+                      :type "file"
+                      :checksum (file-checksum path attributes checksum-type))
+        :directory (assoc base-attributes
+                           :type "directory"
+                           :checksum (file-checksum path attributes "ctime"))
+        :link (assoc base-attributes
+                      :type "link"
+                      :destination (if follow-links?
+                                     nil
+                                     (readlink path))
+                      :checksum (file-checksum path attributes checksum-type))))))
+
 (defn find-in-modulepath
   "Walks a modulepath and returns a path to the first existing file entry
   or nil if no existing file is found."
@@ -84,13 +187,6 @@
        (if (.exists test-file) (.toString test-file)))
     modulepath))
 
-(defn file-response
-  [file]
-  (let [response (response/file-response
-                   file
-                   {:allow-symlinks? true :index-files? false :root false})]
-    (assoc-in response [:headers "Content-Type"] "application/octet-stream")))
-
 (defn subdirs
   "Return all subdirectories of a path."
   [path]
@@ -100,14 +196,23 @@
        (filter #(.isDirectory %))
        (map #(.toString %))))
 
+
 ;; File Content API
+
+(defn file-response
+  [file]
+  (let [response (response/file-response
+                   file
+                   {:allow-symlinks? true :index-files? false :root false})]
+    (assoc-in response [:headers "Content-Type"] "application/octet-stream")))
 
 (defn module-file-handler
   [context]
   (fn [request]
     ;; FIXME: Lots of stuff not handled below. Ensure environment is present as
     ;; a query parameter. Ensure the requested environment is present in our
-    ;; context.
+    ;; context. Ensure we only return a file, or the content of a symlink but
+    ;; not directories or other special file types.
     (let [environment (get-in request [:params "environment"])
           module (get-in request [:route-params :module])
           path (get-in request [:route-params :path])
@@ -142,6 +247,76 @@
         pluginfact-handler (module-plugin-handler context "facts.d")]
     (-> (comidi/routes
           (comidi/context "/puppet/v3/file_content"
+            (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
+                        (module-handler request))
+            (comidi/GET ["/plugins/" [#".*" :path]] request
+                        (plugin-handler request))
+            (comidi/GET ["/pluginfacts/" [#".*" :path]] request
+                        (pluginfact-handler request))))
+
+        comidi/routes->handler
+        params/wrap-params)))
+
+
+;; File Metadata API
+
+(defn module-metadata-handler
+  [context]
+  (fn [request]
+    ;; FIXME: Lots of stuff not handled below. Ensure environment is present as
+    ;; a query parameter. Ensure the requested environment is present in our
+    ;; context. Ensure we only return a file, or the content of a symlink but
+    ;; not directories or other special file types.
+    (let [environment (get-in request [:params "environment"])
+          module (get-in request [:route-params :module])
+          path (get-in request [:route-params :path])
+          modulepath (get-in @(:environments context) [environment "modulepath"])
+          file (find-in-modulepath modulepath (str module "/files") path)
+          ;; FIXME: Only allowed values are "manage" and "follow". There's
+          ;; also a "source_permissions" parameter documented, but that
+          ;; seems to be a docs bug since the param isn't actually used
+          ;; in the API code.
+          follow-links? (case (get-in request [:params "links"] "manage")
+                          "manage" false
+                          true)
+          checksum-type (get-in request [:params "checksum_type"] "md5")]
+      (if file
+        (request-utils/json-response 200 (file-metadata file checksum-type follow-links?))
+        (let [msg (str "Not Found: Could not find file_metadata modules/" (str module path))]
+          (request-utils/json-response
+            404
+            {:message msg :issue_kind "RESOURCE_NOT_FOUND"}))))))
+
+(defn plugin-metadata-handler
+  [context plugin-path]
+  (fn [request]
+    (let [environment (get-in request [:params "environment"])
+          path (get-in request [:route-params :path])
+          modulepath (get-in @(:environments context) [environment "modulepath"])
+          moduledirs (mapcat subdirs modulepath)
+          file (find-in-modulepath moduledirs plugin-path path)
+          ;; FIXME: Only allowed values are "manage" and "follow". There's
+          ;; also a "source_permissions" parameter documented, but that
+          ;; seems to be a docs bug since the param isn't actually used
+          ;; in the API code.
+          follow-links? (case (get-in request [:params "links"] "manage")
+                          "manage" false
+                          true)
+          checksum-type (get-in request [:params "checksum_type"] "md5")]
+      (if file
+        (request-utils/json-response 200 (file-metadata file checksum-type follow-links?))
+        (let [msg (str "not found: could not find plugin " plugin-path "/" path)]
+          (request-utils/json-response
+            404
+            {:message msg :issue_kind "resource_not_found"}))))))
+
+(defn file-metadata-handler
+  [context]
+  (let [module-handler (module-metadata-handler context)
+        plugin-handler (plugin-metadata-handler context "lib")
+        pluginfact-handler (plugin-metadata-handler context "facts.d")]
+    (-> (comidi/routes
+          (comidi/context "/puppet/v3/file_metadata"
             (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
                         (module-handler request))
             (comidi/GET ["/plugins/" [#".*" :path]] request

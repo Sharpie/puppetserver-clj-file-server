@@ -27,6 +27,7 @@
       ;;   DELETE -> Update environments and mount points.
       (add-ring-handler (core/admin-handler context) "/")
       (add-ring-handler (core/file-content-handler context) "/puppet/v3/file_content")
+      (add-ring-handler (core/file-metadata-handler context) "/puppet/v3/file_metadata")
 
       context))
 
