@@ -7,7 +7,7 @@
    [ring.middleware.params :as params]
    [ring.util.response :as response])
   (:import
-   (java.nio.file Files LinkOption)
+   (java.nio.file Files FileVisitResult FileVisitOption LinkOption SimpleFileVisitor)
    (org.apache.commons.codec.digest DigestUtils)
    (org.apache.commons.io.input BoundedInputStream)
    (org.eclipse.jetty.servlet ServletContextHandler ServletHolder DefaultServlet)
@@ -208,6 +208,34 @@
        (filter #(.isDirectory %))
        (map #(.toString %))))
 
+;; TODO: Way too much stuff going on here. Fix later.
+(defn walk-file-tree
+  [path checksum-type follow-links?]
+  (let [root (-> path io/as-file .toPath)
+        results (transient [])
+        visit-fn (fn [file attrs]
+                   (let [metadata (file-metadata (.toString file) checksum-type follow-links?)
+                          rel-path (->> file
+                                        (.relativize root)
+                                        .toString)]
+                      (conj! results (assoc metadata
+                                            :path path
+                                            :relative_path (case rel-path
+                                                             "" "."
+                                                             rel-path))))
+                    FileVisitResult/CONTINUE)
+        visitor (proxy [SimpleFileVisitor] []
+                  (preVisitDirectory [file attrs]
+                    (visit-fn file attrs))
+                  (visitFile [file attrs]
+                    (visit-fn file attrs)))]
+
+    (if follow-links?
+      (Files/walkFileTree root #{FileVisitOption/FOLLOW_LINKS} Integer/MAX_VALUE visitor)
+      (Files/walkFileTree root #{} Integer/MAX_VALUE visitor))
+
+    (persistent! results)))
+
 
 ;; File Content API
 
@@ -334,6 +362,69 @@
             (comidi/GET ["/plugins/" [#".*" :path]] request
                         (plugin-handler request))
             (comidi/GET ["/pluginfacts/" [#".*" :path]] request
+                        (pluginfact-handler request))))
+
+        comidi/routes->handler
+        params/wrap-params)))
+
+
+;; File Metadatas API
+
+(defn module-metadatas-handler
+  [context]
+  (fn [request]
+    ;; FIXME: Lots of stuff not handled below. Ensure environment is present as
+    ;; a query parameter. Ensure the requested environment is present in our
+    ;; context. Ensure we only return a file, or the content of a symlink but
+    ;; not directories or other special file types.
+    (let [environment (get-in request [:params "environment"])
+          module (get-in request [:route-params :module])
+          path (get-in request [:route-params :path])
+          modulepath (get-in @(:environments context) [environment "modulepath"])
+          root (str module "/files")
+          ;; FIXME: Only allowed values are "manage" and "follow". There's
+          ;; also a "source_permissions" parameter documented, but that
+          ;; seems to be a docs bug since the param isn't actually used
+          ;; in the API code.
+          follow-links? (case (get-in request [:params "links"] "manage")
+                          "manage" false
+                          true)
+          checksum-type (get-in request [:params "checksum_type"] "md5")]
+      (request-utils/json-response 200 (walk-file-tree root checksum-type follow-links?)))))
+
+(defn plugin-metadatas-handler
+  [context plugin-path]
+  (fn [request]
+    (let [environment (get-in request [:params "environment"])
+          path (get-in request [:route-params :path])
+          modulepath (get-in @(:environments context) [environment "modulepath"])
+          moduledirs (->> (mapcat subdirs modulepath)
+                          (map #(str % "/" plugin-path))
+                          (filter #(-> % io/as-file .exists)))
+          ;; FIXME: Only allowed values are "manage" and "follow". There's
+          ;; also a "source_permissions" parameter documented, but that
+          ;; seems to be a docs bug since the param isn't actually used
+          ;; in the API code.
+          follow-links? (case (get-in request [:params "links"] "manage")
+                          "manage" false
+                          true)
+          checksum-type (get-in request [:params "checksum_type"] "md5")]
+      (request-utils/json-response 200 (mapcat
+                                         #(walk-file-tree % checksum-type follow-links?)
+                                         moduledirs)))))
+
+(defn file-metadatas-handler
+  [context]
+  (let [module-handler (module-metadata-handler context)
+        plugin-handler (plugin-metadatas-handler context "lib")
+        pluginfact-handler (plugin-metadatas-handler context "facts.d")]
+    (-> (comidi/routes
+          (comidi/context "/puppet/v3/file_metadatas"
+            (comidi/GET ["/modules" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
+              (module-handler request))
+            (comidi/GET ["/plugins" [#".*" :path]] request
+                        (plugin-handler request))
+            (comidi/GET ["/pluginfacts" [#".*" :path]] request
                         (pluginfact-handler request))))
 
         comidi/routes->handler

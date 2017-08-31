@@ -28,6 +28,7 @@
       (add-ring-handler (core/admin-handler context) "/")
       (add-ring-handler (core/file-content-handler context) "/puppet/v3/file_content")
       (add-ring-handler (core/file-metadata-handler context) "/puppet/v3/file_metadata")
+      (add-ring-handler (core/file-metadatas-handler context) "/puppet/v3/file_metadatas")
 
       context))
 
