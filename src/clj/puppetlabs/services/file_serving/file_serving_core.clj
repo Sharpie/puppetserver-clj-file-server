@@ -414,11 +414,19 @@
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)
-          checksum-type (get-in request [:params "checksum_type"] "md5")]
+          checksum-type (get-in request [:params "checksum_type"] "md5")
+          metadata (if (empty? moduledirs)
+                     (as-> modulepath p
+                          (filter #(-> % io/as-file .exists) p)
+                          (first p)
+                          (file-metadata p)
+                          (assoc p :relative_path ".")
+                          (conj [] p))
+                     (mapcat
+                         #(walk-file-tree % checksum-type follow-links?)
+                         moduledirs))]
       (response/content-type
-        (request-utils/json-response 200 (mapcat
-                                         #(walk-file-tree % checksum-type follow-links?)
-                                         moduledirs))
+        (request-utils/json-response 200 metadata)
         "text/pson"))))
 
 (defn file-metadatas-handler
