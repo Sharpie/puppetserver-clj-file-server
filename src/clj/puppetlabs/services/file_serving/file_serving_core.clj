@@ -173,7 +173,7 @@
                            :owner (get attributes "uid")
                            :group (get attributes "gid")
                            :mode (attributes->mode attributes)
-                           :follow follow}]
+                           :links follow}]
       (case (attributes->type attributes)
 
         :file (assoc base-attributes
