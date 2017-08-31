@@ -19,6 +19,7 @@
   :dependencies [[org.clojure/clojure]
 
                  [commons-codec]
+                 [commons-io]
 
                  [ring/ring-core]
 

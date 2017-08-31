@@ -9,6 +9,7 @@
   (:import
    (java.nio.file Files LinkOption)
    (org.apache.commons.codec.digest DigestUtils)
+   (org.apache.commons.io.input BoundedInputStream)
    (org.eclipse.jetty.servlet ServletContextHandler ServletHolder DefaultServlet)
    (org.eclipse.jetty.util.resource ResourceCollection)))
 
@@ -128,8 +129,11 @@
 
 ;; TODO: Figure out how to handle "lite" versions of each hash function.
 (defn file-digest
-  [path checksum-type]
-  (with-open [input (io/input-stream path)]
+  [path checksum-type lite?]
+  (with-open [input (if lite?
+                      ;; Lite versions checksum just the first 512 bytes.
+                      (-> path io/input-stream (BoundedInputStream. 512))
+                      (-> path io/input-stream))]
     (case checksum-type
       "md5" (DigestUtils/md5Hex input)
       "sha1" (DigestUtils/sha1Hex input)
@@ -144,10 +148,18 @@
              :value (str "{ctime}" (get attributes "creationTime"))}
     "mtime" {:type "mtime"
              :value (str "{mtime}" (get attributes "lastModifiedTime"))}
-    ;; Default case.
-    {:type checksum-type
-     :value (str "{" checksum-type "}"
-                 (file-digest path checksum-type))}))
+    "md5" {:type "md5"
+           :value (str "{md5}" (file-digest path "md5" false))}
+    "md5lite" {:type "md5lite"
+               :value (str "{md5lite}" (file-digest path "md5" true))}
+    "sha1" {:type "sha1"
+            :value (str "{sha1}" (file-digest path "sha1" false))}
+    "sha1lite" {:type "sha1lite"
+                :value (str "{sha1lite}" (file-digest path "sha1" true))}
+    "sha256" {:type "sha256"
+           :value (str "{sha256}" (file-digest path "sha256" false))}
+    "sha256lite" {:type "sha256lite"
+               :value (str "{sha256lite}" (file-digest path "sha256" true))}))
 
 (defn file-metadata
   ([path]
