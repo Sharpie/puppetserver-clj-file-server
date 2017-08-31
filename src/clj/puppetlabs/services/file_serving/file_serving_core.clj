@@ -321,7 +321,9 @@
                           true)
           checksum-type (get-in request [:params "checksum_type"] "md5")]
       (if file
-        (request-utils/json-response 200 (file-metadata file checksum-type follow-links?))
+        (response/content-type
+          (request-utils/json-response 200 (file-metadata file checksum-type follow-links?))
+          "text/pson")
         (let [msg (str "Not Found: Could not find file_metadata modules/" (str module path))]
           (request-utils/json-response
             404
@@ -344,7 +346,9 @@
                           true)
           checksum-type (get-in request [:params "checksum_type"] "md5")]
       (if file
-        (request-utils/json-response 200 (file-metadata file checksum-type follow-links?))
+        (response/content-type
+          (request-utils/json-response 200 (file-metadata file checksum-type follow-links?))
+          "text/pson")
         (let [msg (str "not found: could not find plugin " plugin-path "/" path)]
           (request-utils/json-response
             404
@@ -390,7 +394,9 @@
                           "manage" false
                           true)
           checksum-type (get-in request [:params "checksum_type"] "md5")]
-      (request-utils/json-response 200 (walk-file-tree root checksum-type follow-links?)))))
+      (response/content-type
+        (request-utils/json-response 200 (walk-file-tree root checksum-type follow-links?))
+        "text/pson"))))
 
 (defn plugin-metadatas-handler
   [context plugin-path]
@@ -409,9 +415,11 @@
                           "manage" false
                           true)
           checksum-type (get-in request [:params "checksum_type"] "md5")]
-      (request-utils/json-response 200 (mapcat
+      (response/content-type
+        (request-utils/json-response 200 (mapcat
                                          #(walk-file-tree % checksum-type follow-links?)
-                                         moduledirs)))))
+                                         moduledirs))
+        "text/pson"))))
 
 (defn file-metadatas-handler
   [context]
