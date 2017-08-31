@@ -424,9 +424,13 @@
                           (conj [] p))
                      (mapcat
                          #(walk-file-tree % checksum-type follow-links?)
-                         moduledirs))]
+                         moduledirs))
+          ;; FIXME: Inefficient. Should filter file paths before file-metadata
+          ;; gets called so that we don't spend time reading and checksumming
+          ;; files that aren't going to be part of the reply.
+          result (->> (group-by :relative_path metadata) vals (map first))]
       (response/content-type
-        (request-utils/json-response 200 metadata)
+        (request-utils/json-response 200 result)
         "text/pson"))))
 
 (defn file-metadatas-handler
