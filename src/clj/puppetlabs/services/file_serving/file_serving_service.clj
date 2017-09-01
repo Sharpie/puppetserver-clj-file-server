@@ -3,12 +3,10 @@
    [clojure.tools.logging :as log]
    [puppetlabs.services.file-serving.file-serving-core :as core]
    [puppetlabs.trapperkeeper.core :refer [defservice]]
-   [puppetlabs.trapperkeeper.services :as services]
-   [puppetlabs.trapperkeeper.services.webserver.jetty9-core :as jetty-core]))
+   [puppetlabs.trapperkeeper.services :as services]))
 
 
-(defprotocol FileServingService
-  (hello [this caller]))
+(defprotocol FileServingService)
 
 (defservice file-serving-service
   FileServingService
@@ -48,6 +46,4 @@
     context)
   (stop [this context]
     (log/info "Shutting down FileServing service")
-    context)
-  (hello [this caller]
-         (core/hello caller)))
+    context))
