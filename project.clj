@@ -26,7 +26,9 @@
                  [puppetlabs/ring-middleware]
 
                  [puppetlabs/trapperkeeper]
+                 [puppetlabs/trapperkeeper-status]
                  [puppetlabs/trapperkeeper-webserver-jetty9]
+
                  [puppetlabs/jruby-utils "0.10.0"]]
 
   :profiles {:dev {:source-paths ["dev"]

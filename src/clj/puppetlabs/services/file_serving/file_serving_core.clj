@@ -4,6 +4,7 @@
    [puppetlabs.comidi :as comidi]
    [puppetlabs.ring-middleware.utils :as request-utils]
    [puppetlabs.bodgery.jruby :as jruby]
+   [puppetlabs.trapperkeeper.services.status.status-core :as status-core]
    [ring.middleware.params :as params]
    [ring.util.response :as response])
   (:import
@@ -12,6 +13,19 @@
    (org.apache.commons.io.input BoundedInputStream)))
 
 ;; Admin API
+
+(defn build-status-callback
+  "Creates a callback function that the trapperkeeper-status library
+  can use to report on status."
+  [context]
+  (fn
+    [level]
+      (let [level>= (partial status-core/compare-levels >= level)]
+        {:state :running
+         :status (cond-> {}
+                   (level>= :debug) (assoc
+                                     :environments @(:environments context)
+                                     :ruby_mounts @(:ruby-mounts context)))})))
 
 (defn refresh-jruby-state!
   "Refreshes the state of environments and mount points visible to the Ruby
@@ -22,36 +36,6 @@
             (jruby/run-script! jruby-service "file_serving_shims/get_environments.rb"))
     (reset! (:ruby-mounts context)
             (jruby/run-script! jruby-service "file_serving_shims/get_mounts.rb"))))
-
-(defn file-serving-info-handler
-  "Build a Ring handler for returning the state of the file serving system."
-  [context]
-  (fn [request]
-    (request-utils/json-response
-      200
-      {:environments (-> context :environments deref)
-       :ruby_mounts (-> context :ruby-mounts deref)})))
-
-(defn file-serving-refresh-handler
-  "Builds a Ring handler that re-syncs the file server state with the
-  current state of the JRuby pool."
-  [context]
-  (fn [request]
-    (refresh-jruby-state! context)
-    {:status 204}))
-
-(defn admin-handler
-  "Returns a Ring handler for inspecting and flushing the state of
-  environments and mount points"
-  [context]
-  (let [info-handler (file-serving-info-handler context)
-        refresh-handler (file-serving-refresh-handler context)]
-    (comidi/routes->handler
-      (comidi/routes
-        (comidi/GET "/file-serving" request
-                    (info-handler request))
-        (comidi/DELETE "/file-serving" request
-                       (refresh-handler request))))))
 
 
 ;; File Utilities
