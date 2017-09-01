@@ -8,7 +8,7 @@
 
 (defprotocol FileServingService)
 
-(defservice file-serving-service
+(defservice clj-file-serving-service
   FileServingService
   [[:WebserverService add-ring-handler]
    [:JRubyPuppetService]]
