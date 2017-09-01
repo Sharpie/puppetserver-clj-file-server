@@ -38,7 +38,9 @@
                                   ;; code, helper functions and libraries.
                                   [puppetlabs/trapperkeeper-webserver-jetty9 nil :classifier "test"]
                                   [puppetlabs/trapperkeeper nil :classifier "test" :scope "test"]
-                                  [puppetlabs/kitchensink nil :classifier "test" :scope "test"]]}}
+                                  [puppetlabs/kitchensink nil :classifier "test" :scope "test"]]}
+
+             :module {:jar-name "clj-file-server.jar"}}
 
   :aliases {"tk" ["trampoline" "run" "--config" "dev-resources/config.conf"]}
 
