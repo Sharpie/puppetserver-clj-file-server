@@ -1,3 +1,7 @@
+(def puppetserver-version
+  "Version of Puppet Server to develop and test against"
+  "5.0.0")
+
 (defproject puppetserver/clj-file-server "0.2.0-SNAPSHOT"
   :description "Prototype file server service for Puppet Server"
   :license {:name "Eclipse Public License"
@@ -40,7 +44,9 @@
                                   ;; code, helper functions and libraries.
                                   [puppetlabs/trapperkeeper-webserver-jetty9 nil :classifier "test"]
                                   [puppetlabs/trapperkeeper nil :classifier "test" :scope "test"]
-                                  [puppetlabs/kitchensink nil :classifier "test" :scope "test"]]}
+                                  [puppetlabs/kitchensink nil :classifier "test" :scope "test"]
+
+                                  [puppetlabs/puppetserver ~puppetserver-version :classifier "test" :scope "test"]]}
 
              :module {:jar-name "clj-file-server.jar"}}
 
