@@ -364,7 +364,7 @@
           module (get-in request [:route-params :module])
           path (get-in request [:route-params :path])
           modulepath (get-in @(:environments context) [environment "modulepath"])
-          root (str module "/files")
+          root (find-in-modulepath modulepath module "/files")
           ;; FIXME: Only allowed values are "manage" and "follow". There's
           ;; also a "source_permissions" parameter documented, but that
           ;; seems to be a docs bug since the param isn't actually used
@@ -414,12 +414,12 @@
 
 (defn file-metadatas-handler
   [context]
-  (let [module-handler (module-metadata-handler context)
+  (let [module-handler (module-metadatas-handler context)
         plugin-handler (plugin-metadatas-handler context "lib")
         pluginfact-handler (plugin-metadatas-handler context "facts.d")]
     (-> (comidi/routes
           (comidi/context "/puppet/v3/file_metadatas"
-            (comidi/GET ["/modules" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
+            (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
               (module-handler request))
             (comidi/GET ["/plugins" [#".*" :path]] request
                         (plugin-handler request))
