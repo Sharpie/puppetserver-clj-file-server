@@ -1,4 +1,5 @@
 /target
+/pkg
 /classes
 /checkouts
 pom.xml
