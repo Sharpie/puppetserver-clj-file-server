@@ -35,6 +35,7 @@
                   (fn [s] (when s (tka/stop s)))))
 
 (defn go []
+  (stop)
   (init)
   (start))
 
