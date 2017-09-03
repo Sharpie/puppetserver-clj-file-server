@@ -1,7 +1,7 @@
 (ns tk-devtools
   (:require [clojure.repl :refer :all]
             [clojure.pprint :as pprint]
-            [clojure.tools.namespace.repl :refer [refresh]]
+            [clojure.tools.namespace.repl :refer [set-refresh-dirs refresh]]
             [puppetlabs.trapperkeeper.app :as tka]
             [puppetlabs.trapperkeeper.bootstrap :as bootstrap]
             [puppetlabs.trapperkeeper.config :as config]
@@ -11,6 +11,11 @@
 ;;; Basic system life cycle
 
 (def system nil)
+
+;; Ensure only source files from the current project are refreshed. This
+;; excludes the checkouts directory as puppetserver has tests containing
+;; relative paths that don't resolve correctly.
+(set-refresh-dirs "./src/clj" "./dev")
 
 (defn init []
   (alter-var-root #'system
