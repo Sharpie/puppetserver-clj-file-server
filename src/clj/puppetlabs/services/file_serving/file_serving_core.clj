@@ -262,18 +262,13 @@
   (let [module-handler (module-file-handler context)
         plugin-handler (module-plugin-handler context "lib")
         pluginfact-handler (module-plugin-handler context "facts.d")]
-    (-> (comidi/routes
-          (comidi/context "/puppet/v3/file_content"
-            (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
-                        (module-handler request))
-            (comidi/GET ["/plugins/" [#".*" :path]] request
-                        (plugin-handler request))
-            (comidi/GET ["/pluginfacts/" [#".*" :path]] request
-                        (pluginfact-handler request))))
-
-        comidi/routes->handler
-        wrap-with-service-id
-        params/wrap-params)))
+    (comidi/context "/puppet/v3/file_content"
+      (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
+                  (module-handler request))
+      (comidi/GET ["/plugins/" [#".*" :path]] request
+                  (plugin-handler request))
+      (comidi/GET ["/pluginfacts/" [#".*" :path]] request
+                  (pluginfact-handler request)))))
 
 
 ;; File Metadata API
@@ -337,18 +332,13 @@
   (let [module-handler (module-metadata-handler context)
         plugin-handler (plugin-metadata-handler context "lib")
         pluginfact-handler (plugin-metadata-handler context "facts.d")]
-    (-> (comidi/routes
-          (comidi/context "/puppet/v3/file_metadata"
-            (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
-                        (module-handler request))
-            (comidi/GET ["/plugins/" [#".*" :path]] request
-                        (plugin-handler request))
-            (comidi/GET ["/pluginfacts/" [#".*" :path]] request
-                        (pluginfact-handler request))))
-
-        comidi/routes->handler
-        wrap-with-service-id
-        params/wrap-params)))
+    (comidi/context "/puppet/v3/file_metadata"
+      (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
+                  (module-handler request))
+      (comidi/GET ["/plugins/" [#".*" :path]] request
+                  (plugin-handler request))
+      (comidi/GET ["/pluginfacts/" [#".*" :path]] request
+                  (pluginfact-handler request)))))
 
 
 ;; File Metadatas API
@@ -417,15 +407,22 @@
   (let [module-handler (module-metadatas-handler context)
         plugin-handler (plugin-metadatas-handler context "lib")
         pluginfact-handler (plugin-metadatas-handler context "facts.d")]
-    (-> (comidi/routes
-          (comidi/context "/puppet/v3/file_metadatas"
-            (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
-              (module-handler request))
-            (comidi/GET ["/plugins" [#".*" :path]] request
-                        (plugin-handler request))
-            (comidi/GET ["/pluginfacts" [#".*" :path]] request
-                        (pluginfact-handler request))))
+    (comidi/context "/puppet/v3/file_metadatas"
+      (comidi/GET ["/modules/" [#"[a-z][a-z0-9_]*" :module] [#".*" :path]] request
+        (module-handler request))
+      (comidi/GET ["/plugins" [#".*" :path]] request
+                  (plugin-handler request))
+      (comidi/GET ["/pluginfacts" [#".*" :path]] request
+                  (pluginfact-handler request)))))
 
-        comidi/routes->handler
-        wrap-with-service-id
-        params/wrap-params)))
+
+(defn build-request-handler
+  [context]
+  (-> (comidi/routes
+        (file-content-handler context)
+        (file-metadata-handler context)
+        (file-metadatas-handler context))
+
+      comidi/routes->handler
+      wrap-with-service-id
+      params/wrap-params))
