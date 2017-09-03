@@ -18,6 +18,7 @@
 
   :source-paths ["src/clj"]
   :resource-paths ["src/ruby"]
+  :test-paths ["test/integration"]
 
   :dependencies [[org.clojure/clojure]
 
@@ -38,6 +39,9 @@
   :profiles {:dev {:source-paths ["dev"]
                    :repl-options {:init-ns tk-devtools}
                    :dependencies [[org.clojure/tools.namespace]
+
+                                  [cheshire]
+                                  [ring-mock]
 
                                   ;; Re-declare dependencies with "test"
                                   ;; classifiers to pull in additional testing
