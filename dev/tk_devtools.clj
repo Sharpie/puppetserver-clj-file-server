@@ -1,6 +1,7 @@
 (ns tk-devtools
   (:require [clojure.repl :refer :all]
             [clojure.pprint :as pprint]
+            [clojure.java.io :as io]
             [clojure.tools.namespace.repl :refer [set-refresh-dirs refresh]]
             [puppetlabs.trapperkeeper.app :as tka]
             [puppetlabs.trapperkeeper.bootstrap :as bootstrap]
@@ -17,11 +18,20 @@
 ;; relative paths that don't resolve correctly.
 (set-refresh-dirs "./src/clj" "./dev")
 
+(def bootstrap-config
+  (-> "clj-file-server/bootstrap.cfg"
+      io/resource
+      .getPath))
+(def app-config
+  (-> "clj-file-server/config.conf"
+      io/resource
+      .getPath))
+
 (defn init []
   (alter-var-root #'system
                   (fn [_] (tk/build-app
-                            (bootstrap/parse-bootstrap-config! "./dev-resources/bootstrap.cfg")
-                            (config/load-config "./dev-resources/config.conf"))))
+                            (bootstrap/parse-bootstrap-config! bootstrap-config)
+                            (config/load-config app-config))))
   (alter-var-root #'system tka/init)
   (tka/check-for-errors! system))
 
