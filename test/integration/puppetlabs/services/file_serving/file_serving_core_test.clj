@@ -31,6 +31,11 @@
       io/resource
       .getPath))
 
+(def codedir
+  (-> "clj-file-server/fixtures/codedir"
+      io/resource
+      .getPath))
+
 (def app-services
   (tk-bootstrap/parse-bootstrap-config! bootstrap-config))
 
@@ -39,7 +44,8 @@
   (-> app-config
       tk-config/load-config
       (assoc-in [:webserver :ssl-port] 18140)
-      (assoc-in [:global :logging-config] logback-config)))
+      (assoc-in [:global :logging-config] logback-config)
+      (assoc-in [:jruby-puppet :master-code-dir] codedir)))
 
 (defn get-jruby-handler
   [app]
