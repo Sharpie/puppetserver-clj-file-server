@@ -21,6 +21,7 @@
     (let [context (assoc context
                          :environments (atom {})
                          :ruby-mounts (atom [])
+                         :puppet-version (atom "")
                          :jruby-service (services/get-service this :JRubyPuppetService))
           handler (core/build-request-handler context)]
 
