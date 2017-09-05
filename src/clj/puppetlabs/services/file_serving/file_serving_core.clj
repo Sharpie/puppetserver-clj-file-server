@@ -55,7 +55,7 @@
   "A string of 'Unix' FileAttributes to read. Oddly, these are not in the
   official Java 8 docs. However, they work and seem to be the quickest
   means of getting items like numeric uid, gid and file modes."
-  "unix:mode,uid,gid,creationTime,lastModifiedTime,isDirectory,isRegularFile,isSymbolicLink")
+  "unix:mode,uid,gid,ctime,lastModifiedTime,isDirectory,isRegularFile,isSymbolicLink")
 
 (defn as-path
   [path]
@@ -113,7 +113,7 @@
     "none" {:type "none"
             :value "{none}"}
     "ctime" {:type "ctime"
-             :value (str "{ctime}" (get attributes "creationTime"))}
+             :value (str "{ctime}" (get attributes "ctime"))}
     "mtime" {:type "mtime"
              :value (str "{mtime}" (get attributes "lastModifiedTime"))}
     "md5" {:type "md5"
