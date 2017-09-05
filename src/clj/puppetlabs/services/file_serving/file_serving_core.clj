@@ -8,7 +8,7 @@
    [ring.middleware.params :as params]
    [ring.util.response :as response])
   (:import
-   (java.nio.file Files FileVisitResult FileVisitOption LinkOption SimpleFileVisitor)
+   (java.nio.file Files LinkOption)
    (org.apache.commons.codec.digest DigestUtils)
    (org.apache.commons.io.input BoundedInputStream)))
 
@@ -56,6 +56,10 @@
   official Java 8 docs. However, they work and seem to be the quickest
   means of getting items like numeric uid, gid and file modes."
   "unix:mode,uid,gid,creationTime,lastModifiedTime,isDirectory,isRegularFile,isSymbolicLink")
+
+(defn as-path
+  [path]
+  (.toPath (io/as-file path)))
 
 (defn file-attributes
   "Takes a string path and determines file information such as ownership,
@@ -172,33 +176,78 @@
        (filter #(.isDirectory %))
        (map #(.toString %))))
 
-;; TODO: Way too much stuff going on here. Fix later.
-(defn walk-file-tree
-  [path checksum-type follow-links?]
-  (let [root (-> path io/as-file .toPath)
-        results (transient [])
-        visit-fn (fn [file attrs]
-                   (let [metadata (file-metadata (.toString file) checksum-type follow-links?)
-                          rel-path (->> file
-                                        (.relativize root)
-                                        .toString)]
-                      (conj! results (assoc metadata
-                                            :path path
-                                            :relative_path (case rel-path
-                                                             "" "."
-                                                             rel-path))))
-                    FileVisitResult/CONTINUE)
-        visitor (proxy [SimpleFileVisitor] []
-                  (preVisitDirectory [file attrs]
-                    (visit-fn file attrs))
-                  (visitFile [file attrs]
-                    (visit-fn file attrs)))]
+(defn bf-walk
+  "Does a breadth-first walk of a directory tree returning a list of tuples
+  containing a java.nio.file.Path object for each child followed by a hash
+  of its attributes."
+  ([path]
+   (bf-walk path false))
+  ([path follow-links?]
+   (let [root (as-path path)
+         link-options (if follow-links?
+                        links-follow
+                        links-nofollow)
+         walk (fn walk [dir]
+                (lazy-seq
+                  (let [children (iterator-seq (-> dir Files/list .iterator))
+                        file-info (map (juxt identity #(Files/readAttributes % unix-attributes link-options)) children)
+                        subdirs  (filter #(-> % last (get "isDirectory")) file-info)]
+                    (concat
+                      file-info
+                      (mapcat walk (map first subdirs))))))]
 
-    (if follow-links?
-      (Files/walkFileTree root #{FileVisitOption/FOLLOW_LINKS} Integer/MAX_VALUE visitor)
-      (Files/walkFileTree root #{} Integer/MAX_VALUE visitor))
+     (walk root))))
 
-    (persistent! results)))
+(defn stat-dirtree
+  ([path]
+   (stat-dirtree path false))
+  ([path follow-links?]
+   (let [root (as-path path)
+         link-options (if follow-links?
+                        links-follow
+                        links-nofollow)
+         relativize (fn [child]
+                      {:path path
+                       :relative_path (->> child
+                                           first
+                                           (.relativize root)
+                                           .toString)
+                       :attributes (last child)})]
+     (cons
+       {:path path
+        :relative_path "."
+        :attributes (Files/readAttributes root unix-attributes link-options)}
+       (map relativize (bf-walk path))))))
+
+(defn stat->metadata
+  ([{:keys [path relative_path attributes]}]
+   (stat->metadata "md5" false))
+  ([{:keys [path relative_path attributes]} checksum-type follow-links?]
+   (let [follow (if follow-links? "follow" "manage")
+         base-attributes {:path path
+                          :relative_path relative_path
+                          :destination nil
+                          :owner (get attributes "uid")
+                          :group (get attributes "gid")
+                          :mode (attributes->mode attributes)
+                          :links follow}
+         full-path (if relative_path
+                     (-> (io/file path relative_path) .toString)
+                     path)]
+     (case (attributes->type attributes)
+
+       :file (assoc base-attributes
+                     :type "file"
+                     :checksum (file-checksum full-path attributes checksum-type))
+       :directory (assoc base-attributes
+                          :type "directory"
+                          :checksum (file-checksum path attributes "ctime"))
+       :link (assoc base-attributes
+                     :type "link"
+                     :destination (if follow-links?
+                                    nil
+                                    (readlink full-path))
+                     :checksum (file-checksum full-path attributes checksum-type))))))
 
 
 ;; Ring Utilities
@@ -360,6 +409,7 @@
           path (get-in request [:route-params :path])
           modulepath (get-in @(:environments context) [environment "modulepath"])
           root (find-in-modulepath modulepath module "/files")
+          _ (clojure.pprint/pprint modulepath)
           ;; FIXME: Only allowed values are "manage" and "follow". There's
           ;; also a "source_permissions" parameter documented, but that
           ;; seems to be a docs bug since the param isn't actually used
@@ -367,9 +417,11 @@
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)
-          checksum-type (get-in request [:params "checksum_type"] "md5")]
+          checksum-type (get-in request [:params "checksum_type"] "md5")
+          metadata (->> (stat-dirtree root follow-links?)
+                        (map #(stat->metadata % checksum-type follow-links?)))]
       (response/content-type
-        (request-utils/json-response 200 (walk-file-tree root checksum-type follow-links?))
+        (request-utils/json-response 200 metadata)
         "text/pson"))))
 
 (defn plugin-metadatas-handler
@@ -396,15 +448,14 @@
                           (file-metadata p)
                           (assoc p :relative_path ".")
                           (conj [] p))
-                     (mapcat
-                         #(walk-file-tree % checksum-type follow-links?)
-                         moduledirs))
-          ;; FIXME: Inefficient. Should filter file paths before file-metadata
-          ;; gets called so that we don't spend time reading and checksumming
-          ;; files that aren't going to be part of the reply.
-          result (->> (group-by :relative_path metadata) vals (map first))]
+                     (->> moduledirs
+                          (mapcat #(stat-dirtree % follow-links?))
+                          (group-by :relative_path)
+                          vals
+                          (map first)
+                          (map #(stat->metadata % checksum-type follow-links?))))]
       (response/content-type
-        (request-utils/json-response 200 result)
+        (request-utils/json-response 200 metadata)
         "text/pson"))))
 
 (defn file-metadatas-handler
