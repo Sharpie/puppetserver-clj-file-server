@@ -9,6 +9,7 @@
    [ring.util.response :as response])
   (:import
    (java.nio.file Files LinkOption)
+   (java.text SimpleDateFormat)
    (org.apache.commons.codec.digest DigestUtils)
    (org.apache.commons.io.input BoundedInputStream)))
 
@@ -56,6 +57,10 @@
   official Java 8 docs. However, they work and seem to be the quickest
   means of getting items like numeric uid, gid and file modes."
   "unix:mode,uid,gid,ctime,lastModifiedTime,isDirectory,isRegularFile,isSymbolicLink")
+
+(def ruby-datestamp
+  "A date format matching the default output of Ruby's Time class."
+  (SimpleDateFormat. "yyyy-MM-dd HH:mm:ss Z"))
 
 (defn as-path
   [path]
@@ -113,9 +118,13 @@
     "none" {:type "none"
             :value "{none}"}
     "ctime" {:type "ctime"
-             :value (str "{ctime}" (get attributes "ctime"))}
+             :value (str "{ctime}" (->> (get attributes "ctime")
+                                        .toMillis
+                                        (.format ruby-datestamp)))}
     "mtime" {:type "mtime"
-             :value (str "{mtime}" (get attributes "lastModifiedTime"))}
+             :value (str "{mtime}" (->> (get attributes "lastModifiedTime")
+                                        .toMillis
+                                        (.format ruby-datestamp)))}
     "md5" {:type "md5"
            :value (str "{md5}" (file-digest path "md5" false))}
     "md5lite" {:type "md5lite"
