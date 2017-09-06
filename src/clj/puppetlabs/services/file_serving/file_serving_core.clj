@@ -430,7 +430,6 @@
           path (get-in request [:route-params :path])
           modulepath (get-in @(:environments context) [environment "modulepath"])
           root (find-in-modulepath modulepath module "/files")
-          _ (clojure.pprint/pprint modulepath)
           ;; FIXME: Only allowed values are "manage" and "follow". There's
           ;; also a "source_permissions" parameter documented, but that
           ;; seems to be a docs bug since the param isn't actually used
