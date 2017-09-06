@@ -8,7 +8,7 @@
    [ring.middleware.params :as params]
    [ring.util.response :as response])
   (:import
-   (java.nio.file Files LinkOption)
+   (java.nio.file Files LinkOption Path)
    (java.text SimpleDateFormat)
    (org.apache.commons.codec.digest DigestUtils)
    (org.apache.commons.io.input BoundedInputStream)))
@@ -65,6 +65,15 @@
 (defn as-path
   [path]
   (.toPath (io/as-file path)))
+
+(defn read-attributes
+  "Takes a string path and determines file information such as ownership,
+  access times and permissions."
+  ([^Path path]
+   (read-attributes path false))
+  ([^Path path follow-links?]
+   (let [link-behavior (if follow-links? links-follow links-nofollow)]
+     (into {} (Files/readAttributes path unix-attributes link-behavior)))))
 
 (defn file-attributes
   "Takes a string path and determines file information such as ownership,
@@ -199,7 +208,7 @@
          walk (fn walk [dir]
                 (lazy-seq
                   (let [children (iterator-seq (-> dir Files/list .iterator))
-                        file-info (map (juxt identity #(Files/readAttributes % unix-attributes link-options)) children)
+                        file-info (map (juxt identity #(read-attributes % follow-links?)) children)
                         subdirs  (filter #(-> % last (get "isDirectory")) file-info)]
                     (concat
                       file-info
@@ -212,20 +221,23 @@
    (stat-dirtree path false))
   ([path follow-links?]
    (let [root (as-path path)
-         link-options (if follow-links?
-                        links-follow
-                        links-nofollow)
+         root-stat {:path path
+                    :relative_path "."
+                    :attributes (read-attributes root follow-links?)}
          relativize (fn [child]
                       {:path path
                        :relative_path (->> child
                                            first
                                            (.relativize root)
                                            .toString)
-                       :attributes (last child)})]
+                       ;; NOTE: Copy ctime from root directory.
+                       ;; Bug compatibility with Puppet.
+                       :attributes (assoc
+                                     (last child)
+                                     "ctime"
+                                     (get-in root-stat [:attributes "ctime"]))})]
      (cons
-       {:path path
-        :relative_path "."
-        :attributes (Files/readAttributes root unix-attributes link-options)}
+       root-stat
        (map relativize (bf-walk path))))))
 
 (defn stat->metadata
@@ -250,7 +262,7 @@
                      :checksum (file-checksum full-path attributes checksum-type))
        :directory (assoc base-attributes
                           :type "directory"
-                          :checksum (file-checksum path attributes "ctime"))
+                          :checksum (file-checksum full-path attributes "ctime"))
        :link (assoc base-attributes
                      :type "link"
                      :destination (if follow-links?
