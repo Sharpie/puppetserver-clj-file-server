@@ -37,6 +37,9 @@
             (jruby/run-script! jruby-service "file_serving_shims/get_environments.rb"))
     (reset! (:puppet-version context)
             (jruby/run-script! jruby-service "file_serving_shims/get_puppet_version.rb"))
+    (reset! (:default-permissions context)
+            (->> (jruby/run-script! jruby-service "file_serving_shims/get_default_permissions.rb")
+                 (into {})))
     (reset! (:ruby-mounts context)
             (jruby/run-script! jruby-service "file_serving_shims/get_mounts.rb"))))
 
@@ -460,6 +463,8 @@
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)
+          ignore-source-permissions? (= "ignore"
+                                        (get-in request [:headers "source_permissions"] "ignore"))
           checksum-type (get-in request [:params "checksum_type"] "md5")
           metadata (if (empty? moduledirs)
                      (as-> modulepath p
@@ -473,6 +478,10 @@
                           (group-by :relative_path)
                           vals
                           (map first)
+                          (map (if ignore-source-permissions?
+                                 #(assoc % :attributes
+                                         (merge (:attributes %) @(:default-permissions context)))
+                                 identity))
                           (map #(stat->metadata % checksum-type follow-links?))))]
       (response/content-type
         (request-utils/json-response 200 metadata)
