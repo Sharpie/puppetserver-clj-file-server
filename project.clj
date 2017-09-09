@@ -27,6 +27,8 @@
 
                  [ring/ring-core]
 
+                 [prismatic/plumbing]
+
                  [puppetlabs/comidi]
                  [puppetlabs/ring-middleware]
 

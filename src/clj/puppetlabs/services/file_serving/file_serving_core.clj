@@ -1,6 +1,7 @@
 (ns puppetlabs.services.file-serving.file-serving-core
   (:require
    [clojure.java.io :as io]
+   [plumbing.core :as plumbing]
    [puppetlabs.comidi :as comidi]
    [puppetlabs.ring-middleware.utils :as request-utils]
    [puppetlabs.bodgery.jruby :as jruby]
@@ -477,9 +478,7 @@
                           (conj [] p))
                      (->> moduledirs
                           (mapcat #(stat-dirtree % follow-links?))
-                          (group-by :relative_path)
-                          vals
-                          (map first)
+                          (plumbing/distinct-by :relative_path)
                           (map (if ignore-source-permissions?
                                  #(assoc % :attributes
                                          (merge (:attributes %) @(:default-permissions context)))
