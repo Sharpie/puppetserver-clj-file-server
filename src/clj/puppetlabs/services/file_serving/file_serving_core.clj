@@ -208,16 +208,18 @@
          link-options (if follow-links?
                         links-follow
                         links-nofollow)
-         walk (fn walk [dir]
+         walk (fn walk [[x & xs]]
                 (lazy-seq
-                  (let [children (iterator-seq (-> dir Files/list .iterator))
+                  (let [children (iterator-seq (-> x Files/list .iterator))
                         file-info (map (juxt identity #(read-attributes % follow-links?)) children)
                         subdirs  (filter #(-> % last (get "isDirectory")) file-info)]
-                    (concat
+                    (if (and (empty? xs) (empty? subdirs))
                       file-info
-                      (mapcat walk (map first subdirs))))))]
+                      (concat
+                        file-info
+                        (walk (concat xs (map first subdirs))))))))]
 
-     (walk root))))
+     (walk [root]))))
 
 (defn stat-dirtree
   ([path]
