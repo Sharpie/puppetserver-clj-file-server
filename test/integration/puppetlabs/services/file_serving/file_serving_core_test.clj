@@ -153,6 +153,13 @@
             {:headers {"Accept" "text/pson"}
              :params {"environment" "production"
                       "recurse" "true"}})
-          {:params {"source_permissions" ["ignore"
+          {:params {"checksum_type" ["md5"
+                                     "md5lite"
+                                     "sha256"
+                                     "sha256lite"
+                                     "mtime"
+                                     "ctime"
+                                     "none"]
+                    "source_permissions" ["ignore"
                                           "use"
                                           "use_when_creating"]}})))))
