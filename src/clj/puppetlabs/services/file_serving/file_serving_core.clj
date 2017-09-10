@@ -236,12 +236,14 @@
                                            first
                                            (.relativize root)
                                            .toString)
-                       ;; NOTE: Copy ctime from root directory.
-                       ;; Bug compatibility with Puppet.
-                       :attributes (assoc
-                                     (last child)
-                                     "ctime"
-                                     (get-in root-stat [:attributes "ctime"]))})]
+                       ;; NOTE: Copy ctime from root directory, but only for
+                       ;; directories. Bug compatibility with Puppet.
+                       :attributes (if (get (last child) "isDirectory")
+                                     (assoc
+                                       (last child)
+                                       "ctime"
+                                       (get-in root-stat [:attributes "ctime"]))
+                                     (last child))})]
      (cons
        root-stat
        (map relativize (bf-walk path))))))
