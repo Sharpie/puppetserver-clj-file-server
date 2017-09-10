@@ -467,7 +467,7 @@
                           "manage" false
                           true)
           ignore-source-permissions? (= "ignore"
-                                        (get-in request [:headers "source_permissions"] "ignore"))
+                                        (get-in request [:params "source_permissions"] "ignore"))
           checksum-type (get-in request [:params "checksum_type"] "md5")
           metadata (if (empty? moduledirs)
                      (as-> modulepath p
