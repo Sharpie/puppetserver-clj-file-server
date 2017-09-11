@@ -211,7 +211,7 @@
                         links-nofollow)
          walk (fn walk [[x & xs]]
                 (lazy-seq
-                  (let [children (iterator-seq (-> x Files/list .iterator))
+                  (let [children (->> x .toFile .listFiles (map #(.toPath %)))
                         file-info (map (juxt identity #(read-attributes % follow-links?)) children)
                         subdirs  (filter #(-> % last (get "isDirectory")) file-info)]
                     (if (and (empty? xs) (empty? subdirs))
