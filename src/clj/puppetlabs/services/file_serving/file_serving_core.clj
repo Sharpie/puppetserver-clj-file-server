@@ -9,6 +9,7 @@
    [ring.middleware.params :as params]
    [ring.util.response :as response])
   (:import
+   (java.io FileNotFoundException)
    (java.nio.file Files LinkOption Path)
    (java.text SimpleDateFormat)
    (org.apache.commons.codec.digest DigestUtils)
@@ -276,7 +277,13 @@
                      :destination (if follow-links?
                                     nil
                                     (readlink full-path))
-                     :checksum (file-checksum full-path attributes checksum-type))))))
+                     :checksum (try
+                                 (file-checksum full-path attributes checksum-type)
+                                 ; NOTE: Puppet compat. The Ruby file server
+                                 ; just rescues any failure related to symlinks
+                                 ; and returns a null for the checksum value.
+                                 (catch FileNotFoundException e
+                                   {:type checksum-type :value nil})))))))
 
 
 ;; Ring Utilities
