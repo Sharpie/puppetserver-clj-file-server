@@ -10,7 +10,7 @@
    [ring.util.response :as response])
   (:import
    (java.io FileNotFoundException)
-   (java.nio.file Files LinkOption Path)
+   (java.nio.file Files LinkOption NoSuchFileException Path)
    (java.text SimpleDateFormat)
    (org.apache.commons.codec.digest DigestUtils)
    (org.apache.commons.io.input BoundedInputStream)))
@@ -278,12 +278,25 @@
                                     nil
                                     (readlink full-path))
                      :checksum (try
-                                 (file-checksum full-path attributes checksum-type)
+                                 (file-checksum
+                                   full-path
+                                   ; NOTE: Puppet compat. The Ruby file server
+                                   ; always does a stat when checksumming
+                                   ; symlinks and never a lstat regardless of
+                                   ; how follow-links? is set.
+                                   (read-attributes (as-path full-path) true)
+                                   checksum-type)
                                  ; NOTE: Puppet compat. The Ruby file server
                                  ; just rescues any failure related to symlinks
                                  ; and returns a null for the checksum value.
-                                 (catch FileNotFoundException e
-                                   {:type checksum-type :value nil})))))))
+                                 (catch FileNotFoundException _
+                                   {:type checksum-type :value (case checksum-type
+                                                                 "none" "{none}"
+                                                                 nil)})
+                                 (catch NoSuchFileException _
+                                   {:type checksum-type :value (case checksum-type
+                                                                 "none" "{none}"
+                                                                 nil)})))))))
 
 
 ;; Ring Utilities
