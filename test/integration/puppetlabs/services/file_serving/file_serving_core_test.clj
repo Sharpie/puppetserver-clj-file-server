@@ -153,7 +153,8 @@
             {:headers {"Accept" "text/pson"}
              :params {"environment" "production"
                       "recurse" "true"}})
-          {:params {"checksum_type" ["md5"
+          {:params {"links" ["manage" "follow"]
+                    "checksum_type" ["md5"
                                      "md5lite"
                                      "sha256"
                                      "sha256lite"
