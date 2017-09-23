@@ -247,7 +247,7 @@
                                      (last child))})]
      (cons
        root-stat
-       (map relativize (bf-walk path))))))
+       (map relativize (bf-walk path follow-links?))))))
 
 (defn stat->metadata
   ([{:keys [path relative_path attributes]}]
