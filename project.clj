@@ -40,7 +40,9 @@
 
   :profiles {:dev {:source-paths ["dev"]
                    :repl-options {:init-ns tk-devtools}
+                   :resource-paths ["dev-resources"]
                    :dependencies [[org.clojure/tools.namespace]
+                                  [org.clojure/tools.nrepl]
 
                                   [cheshire]
                                   [ring-mock]
