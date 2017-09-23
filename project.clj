@@ -4,8 +4,8 @@
 
 (defproject puppetserver/clj-file-server "0.2.0-SNAPSHOT"
   :description "Prototype file server service for Puppet Server"
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :license {:name "Apache License 2.0"
+            :url "http://www.apache.org/licenses/LICENSE-2.0.html"}
 
   :pedantic? :abort
 
