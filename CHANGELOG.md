@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+  - Puppet module is now compatible with PE 2017.3.0 and uses the
+    extension JAR directory added to Puppet Server 5.1.0 in SERVER-249.
+
 
 ## [0.2.0] - 2017-09-24
 ### Added

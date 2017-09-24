@@ -30,21 +30,35 @@ class clj_file_server (
     notify  => Exec['pe-puppetserver service full restart'],
   }
 
-  file {'/opt/puppetlabs/server/apps/puppetserver/clj-file-server.jar':
-    ensure => file,
-    owner  => 'root',
-    group  => 'root',
-    mode   => '0644',
-    source => 'puppet:///modules/clj_file_server/clj-file-server.jar',
-    notify  => Exec['pe-puppetserver service full restart'],
-  }
+  if versioncmp($::facts['pe_server_version'], '2017.3.0') >= 0 {
+    # Use the new JAR directory added to Puppet Server 5.1.0 that
+    # is on the classpath by default (SERVER-249).
+    file {'/opt/puppetlabs/server/data/puppetserver/jars/clj-file-server.jar':
+      ensure => file,
+      owner  => 'root',
+      group  => 'root',
+      mode   => '0644',
+      source => 'puppet:///modules/clj_file_server/clj-file-server.jar',
+      notify  => Exec['pe-puppetserver service full restart'],
+    }
+  } else {
+    # For older versions, patch the JAR into the classpath.
+    file {'/opt/puppetlabs/server/apps/puppetserver/clj-file-server.jar':
+      ensure => file,
+      owner  => 'root',
+      group  => 'root',
+      mode   => '0644',
+      source => 'puppet:///modules/clj_file_server/clj-file-server.jar',
+      notify  => Exec['pe-puppetserver service full restart'],
+    }
 
-  file_line {'add file server JAR to classpath':
-    ensure => present,
-    path  => '/opt/puppetlabs/server/apps/puppetserver/cli/apps/start',
-    match => '^\s*-cp',
-    line  => '  -cp ${INSTALL_DIR}/puppet-server-release.jar:${INSTALL_DIR}/clj-file-server.jar \\',
-    replace => true,
-    notify  => Exec['pe-puppetserver service full restart'],
+    file_line {'add file server JAR to classpath':
+      ensure => present,
+      path  => '/opt/puppetlabs/server/apps/puppetserver/cli/apps/start',
+      match => '^\s*-cp',
+      line  => '  -cp ${INSTALL_DIR}/puppet-server-release.jar:${INSTALL_DIR}/clj-file-server.jar \\',
+      replace => true,
+      notify  => Exec['pe-puppetserver service full restart'],
+    }
   }
 }
