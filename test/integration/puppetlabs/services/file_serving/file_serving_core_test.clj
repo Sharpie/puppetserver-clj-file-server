@@ -311,4 +311,14 @@
                                        "none"]
                       "source_permissions" ["ignore"
                                             "use"
-                                            "use_when_creating"]}}))))))
+                                            "use_when_creating"]}}))
+        (testing "Content API"
+          (test-parameterized-requests
+            assert-equal
+            (build-requests
+              :get
+              ["/puppet/v3/file_content/modules/test1/test_file.txt"
+               "/puppet/v3/file_content/modules/test2/baz/test_file_link.txt"]
+              {:headers {"Accept" "application/octet-stream"}
+               :params {"environment" "production"}})
+            {}))))))
