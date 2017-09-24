@@ -15,6 +15,7 @@
     [puppetlabs.trapperkeeper.testutils.bootstrap :as tst-bootstrap]
 
     [ring.util.codec :as ring-codec]
+    [ring.util.response :as ring-response]
     [ring.mock.request :as ring-mock]))
 
 
@@ -59,15 +60,22 @@
   (partial clj-file-server/handle-request
            (tk-app/get-service app :FileServingService)))
 
-(defn with-json-body
-  "Parses a JSON response body back into a map for better diffing."
+(defn with-transformed-body
+  "Parses JSON response bodies back into a map for easy diffing.
+  Slurps file content response bodies into a string for comparison."
   [response]
-  (assoc response :body (-> response :body json/parse-string)))
+  (condp contains? (ring-response/get-header response "Content-Type")
+    #{"application/json" "text/pson"} (assoc response :body
+                                             (-> response :body json/parse-string))
+    #{"application/octet-stream"} (assoc response :body
+                                         (-> response :body slurp))
+    response))
 
 (defn scrub-headers
   "Remove headers that are expected to be present in Clojure responses."
   [response]
-  (update-in response [:headers] dissoc "X-Puppetserver-Service"))
+  (update-in response [:headers]
+             dissoc "X-Puppetserver-Service" "Content-Length" "Last-Modified"))
 
 (defn assert-equal-response
   "Takes a reference to Ring handlers for JRuby and Clojure implementations of
@@ -75,9 +83,9 @@
   handler produces an equal response to a given Ring request."
   [ruby-handler clj-handler]
   (fn [request]
-    (let [ruby-response (with-json-body (ruby-handler request))
+    (let [ruby-response (with-transformed-body (ruby-handler request))
           clj-response (-> (clj-handler request)
-                           with-json-body
+                           with-transformed-body
                            scrub-headers)]
       (is (= ruby-response clj-response)))))
 
@@ -192,4 +200,16 @@
                                        "none"]
                       "source_permissions" ["ignore"
                                             "use"
-                                            "use_when_creating"]}}))))))
+                                            "use_when_creating"]}}))
+
+        (testing "Content API"
+          (test-parameterized-requests
+            assert-equal
+            (build-requests
+              :get
+              ["/puppet/v3/file_content/plugins/facter/test_fact.rb"
+               "/puppet/v3/file_content/plugins/facter/foo/test_link.rb"
+               "/puppet/v3/file_content/plugins/puppet/provider/foo_type/bar_provider.rb"]
+              {:headers {"Accept" "application/octet-stream"}
+               :params {"environment" "production"}})
+            {}))))))
