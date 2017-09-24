@@ -41,7 +41,7 @@ an existing Puppet Server installation. This is accomplished by:
 A Puppet module is included that can perform the necessary configuration for
 a Puppet Enterprise installation. To build the module:
 
-  - Run: `lein with-profile :module jar`
+  - Run: `lein with-profile +module jar`
 
   - Copy the resulting JAR to the `files` directory: `cp target/clj-file-server.jar files/`
 
