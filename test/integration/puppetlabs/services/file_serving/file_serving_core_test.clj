@@ -87,7 +87,8 @@
   [method paths {:keys [headers params]}]
   (map
     #(as-> (ring-mock/request method % params) r
-      (reduce (fn [h [k v]] (ring-mock/header h k v)) r headers))
+       (reduce (fn [h [k v]] (ring-mock/header h k v)) r headers)
+       (assoc r :remote-addr "127.0.0.1"))
     paths))
 
 (defn describe-request
