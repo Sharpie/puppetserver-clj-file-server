@@ -395,11 +395,21 @@
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)
+          ignore-source-permissions? (= "ignore"
+                                        (get-in request [:params "source_permissions"] "ignore"))
           checksum-type (get-in request [:params "checksum_type"] "md5")]
       (if file
-        (response/content-type
-          (request-utils/json-response 200 (file-metadata file checksum-type follow-links?))
-          "text/pson")
+        (let [stat {:path file
+                    :attributes (read-attributes (as-path file) follow-links?)}
+              metadata (if ignore-source-permissions?
+                         (as-> stat s
+                               (assoc s :attributes
+                                      (merge (:attributes s) @(:default-permissions context)))
+                               (stat->metadata s checksum-type follow-links?))
+                         (stat->metadata stat checksum-type follow-links?))]
+          (response/content-type
+            (request-utils/json-response 200 metadata)
+            "text/pson"))
         (let [msg (str "Not Found: Could not find file_metadata modules/" (str module path))]
           (request-utils/json-response
             404
