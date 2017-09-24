@@ -25,7 +25,7 @@ security or ensuring the implementation produces correct results for all cases.
 Therefore, this implementation should not be used in production settings.
 
 [content]: https://docs.puppet.com/puppet/5.1/http_api/http_file_content.html
-[content]: https://docs.puppet.com/puppet/5.1/http_api/http_file_metadata.html
+[metadata]: https://docs.puppet.com/puppet/5.1/http_api/http_file_metadata.html
 
 ## Usage
 
