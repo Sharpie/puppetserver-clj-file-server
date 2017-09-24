@@ -450,7 +450,7 @@
                   (module-handler request))
       (comidi/GET ["/plugins" [#".*" :path]] request
                   (plugin-handler request))
-      (comidi/GET ["/pluginfacts/" [#".*" :path]] request
+      (comidi/GET ["/pluginfacts" [#".*" :path]] request
                   (pluginfact-handler request)))))
 
 

@@ -177,7 +177,6 @@
                       "source_permissions" ["ignore"
                                             "use"
                                             "use_when_creating"]}}))
-
         (testing "Metadata API"
           (test-parameterized-requests
             assert-equal
@@ -201,7 +200,6 @@
                       "source_permissions" ["ignore"
                                             "use"
                                             "use_when_creating"]}}))
-
         (testing "Content API"
           (test-parameterized-requests
             assert-equal
@@ -210,6 +208,62 @@
               ["/puppet/v3/file_content/plugins/facter/test_fact.rb"
                "/puppet/v3/file_content/plugins/facter/foo/test_link.rb"
                "/puppet/v3/file_content/plugins/puppet/provider/foo_type/bar_provider.rb"]
+              {:headers {"Accept" "application/octet-stream"}
+               :params {"environment" "production"}})
+            {})))
+
+      (testing "/pluginfacts mount"
+        (testing "Metadatas API"
+          (test-parameterized-requests
+            assert-equal
+            (build-requests
+              :get
+              ["/puppet/v3/file_metadatas/pluginfacts"]
+              {:headers {"Accept" "text/pson"}
+               :params {"environment" "production"
+                        "recurse" "true"}})
+            {:params {"links" ["manage" "follow"]
+                      "checksum_type" ["md5"
+                                       "md5lite"
+                                       "sha256"
+                                       "sha256lite"
+                                       "mtime"
+                                       "ctime"
+                                       "none"]
+                      "source_permissions" ["ignore"
+                                            "use"
+                                            "use_when_creating"]}}))
+        (testing "Metadata API"
+          (test-parameterized-requests
+            assert-equal
+            (build-requests
+              :get
+              ["/puppet/v3/file_metadata/pluginfacts"
+               "/puppet/v3/file_metadata/pluginfacts/test_fact.txt"
+               "/puppet/v3/file_metadata/pluginfacts/foo/test_fact_symlink.txt"
+               "/puppet/v3/file_metadata/pluginfacts/bar"
+               "/puppet/v3/file_metadata/pluginfacts/bar/test_fact_symlink.txt"]
+              {:headers {"Accept" "text/pson"}
+               :params {"environment" "production"}})
+            {:params {"links" ["manage" "follow"]
+                      "checksum_type" ["md5"
+                                       "md5lite"
+                                       "sha256"
+                                       "sha256lite"
+                                       "mtime"
+                                       "ctime"
+                                       "none"]
+                      "source_permissions" ["ignore"
+                                            "use"
+                                            "use_when_creating"]}}))
+        (testing "Content API"
+          (test-parameterized-requests
+            assert-equal
+            (build-requests
+              :get
+              ["/puppet/v3/file_content/pluginfacts/test_fact.txt"
+               "/puppet/v3/file_content/pluginfacts/foo/test_fact_symlink.txt"
+               "/puppet/v3/file_content/pluginfacts/bar/test_fact_symlink.txt"]
               {:headers {"Accept" "application/octet-stream"}
                :params {"environment" "production"}})
             {}))))))
