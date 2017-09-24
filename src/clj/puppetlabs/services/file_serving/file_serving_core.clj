@@ -388,10 +388,6 @@
           path (get-in request [:route-params :path])
           modulepath (get-in @(:environments context) [environment "modulepath"])
           file (find-in-modulepath modulepath (str module "/files") path)
-          ;; FIXME: Only allowed values are "manage" and "follow". There's
-          ;; also a "source_permissions" parameter documented, but that
-          ;; seems to be a docs bug since the param isn't actually used
-          ;; in the API code.
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)
@@ -423,10 +419,6 @@
           modulepath (get-in @(:environments context) [environment "modulepath"])
           moduledirs (mapcat subdirs modulepath)
           file (find-in-modulepath moduledirs plugin-path path)
-          ;; FIXME: Only allowed values are "manage" and "follow". There's
-          ;; also a "source_permissions" parameter documented, but that
-          ;; seems to be a docs bug since the param isn't actually used
-          ;; in the API code.
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)
@@ -478,10 +470,6 @@
           path (get-in request [:route-params :path])
           modulepath (get-in @(:environments context) [environment "modulepath"])
           root (find-in-modulepath modulepath module "/files")
-          ;; FIXME: Only allowed values are "manage" and "follow". There's
-          ;; also a "source_permissions" parameter documented, but that
-          ;; seems to be a docs bug since the param isn't actually used
-          ;; in the API code.
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)
@@ -507,10 +495,6 @@
           moduledirs (->> (mapcat subdirs modulepath)
                           (map #(str % "/" plugin-path))
                           (filter #(-> % io/as-file .exists)))
-          ;; FIXME: Only allowed values are "manage" and "follow". There's
-          ;; also a "source_permissions" parameter documented, but that
-          ;; seems to be a docs bug since the param isn't actually used
-          ;; in the API code.
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)
