@@ -475,8 +475,14 @@
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)
+          ignore-source-permissions? (= "ignore"
+                                        (get-in request [:params "source_permissions"] "ignore"))
           checksum-type (get-in request [:params "checksum_type"] "md5")
           metadata (->> (stat-dirtree root follow-links?)
+                        (map (if ignore-source-permissions?
+                               #(assoc % :attributes
+                                       (merge (:attributes %) @(:default-permissions context)))
+                               identity))
                         (map #(stat->metadata % checksum-type follow-links?)))]
       (response/content-type
         (request-utils/json-response 200 metadata)
