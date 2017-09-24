@@ -144,23 +144,44 @@
           clj-handler (get-clj-handler app)
           assert-equal (assert-equal-response ruby-handler clj-handler)]
 
-      (testing "File Metadatas API"
-        (test-parameterized-requests
-          assert-equal
-          (build-request
-            :get
-            "/puppet/v3/file_metadatas/plugins"
-            {:headers {"Accept" "text/pson"}
-             :params {"environment" "production"
-                      "recurse" "true"}})
-          {:params {"links" ["manage" "follow"]
-                    "checksum_type" ["md5"
-                                     "md5lite"
-                                     "sha256"
-                                     "sha256lite"
-                                     "mtime"
-                                     "ctime"
-                                     "none"]
-                    "source_permissions" ["ignore"
-                                          "use"
-                                          "use_when_creating"]}})))))
+      (testing "/plugins mount"
+        (testing "Metadatas API"
+          (test-parameterized-requests
+            assert-equal
+            (build-request
+              :get
+              "/puppet/v3/file_metadatas/plugins"
+              {:headers {"Accept" "text/pson"}
+               :params {"environment" "production"
+                        "recurse" "true"}})
+            {:params {"links" ["manage" "follow"]
+                      "checksum_type" ["md5"
+                                       "md5lite"
+                                       "sha256"
+                                       "sha256lite"
+                                       "mtime"
+                                       "ctime"
+                                       "none"]
+                      "source_permissions" ["ignore"
+                                            "use"
+                                            "use_when_creating"]}}))
+
+        (testing "Metadata API"
+          (test-parameterized-requests
+            assert-equal
+            (build-request
+              :get
+              "/puppet/v3/file_metadata/plugins"
+              {:headers {"Accept" "text/pson"}
+               :params {"environment" "production"}})
+            {:params {"links" ["manage" "follow"]
+                      "checksum_type" ["md5"
+                                       "md5lite"
+                                       "sha256"
+                                       "sha256lite"
+                                       "mtime"
+                                       "ctime"
+                                       "none"]
+                      "source_permissions" ["ignore"
+                                            "use"
+                                            "use_when_creating"]}}))))))
