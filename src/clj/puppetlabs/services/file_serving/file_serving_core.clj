@@ -469,7 +469,7 @@
           module (get-in request [:route-params :module])
           path (get-in request [:route-params :path])
           modulepath (get-in @(:environments context) [environment "modulepath"])
-          root (find-in-modulepath modulepath module "/files")
+          root (find-in-modulepath modulepath (str module "/files") path)
           follow-links? (case (get-in request [:params "links"] "manage")
                           "manage" false
                           true)

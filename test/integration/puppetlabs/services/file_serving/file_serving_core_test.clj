@@ -284,7 +284,7 @@
             (build-requests
               :get
               ["/puppet/v3/file_metadatas/modules/test1"
-               "/puppet/v3/file_metadatas/modules/test2"]
+               "/puppet/v3/file_metadatas/modules/test2/foo"]
               {:headers {"Accept" "text/pson"}
                :params {"environment" "production"
                         "recurse" "true"}})

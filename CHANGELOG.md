@@ -32,6 +32,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   - Ruby compat: Symlinks always use the checksum of their target
     regardless of what the links parameter is set to.
 
+  - The `file_metadatas` API correctly handles subpaths passed to the
+    `modules` mount.
+
 
 ## [0.1.0] - 2017-09-02
 ### Added
