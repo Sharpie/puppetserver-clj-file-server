@@ -289,4 +289,26 @@
                                        "none"]
                       "source_permissions" ["ignore"
                                             "use"
+                                            "use_when_creating"]}}))
+        (testing "Metadata API"
+          (test-parameterized-requests
+            assert-equal
+            (build-requests
+              :get
+              ["/puppet/v3/file_metadata/modules/test1"
+               "/puppet/v3/file_metadata/modules/test1/test_file.txt"
+               "/puppet/v3/file_metadata/modules/test2/bar"
+               "/puppet/v3/file_metadata/modules/test2/baz/test_file_link.txt"]
+              {:headers {"Accept" "text/pson"}
+               :params {"environment" "production"}})
+            {:params {"links" ["manage" "follow"]
+                      "checksum_type" ["md5"
+                                       "md5lite"
+                                       "sha256"
+                                       "sha256lite"
+                                       "mtime"
+                                       "ctime"
+                                       "none"]
+                      "source_permissions" ["ignore"
+                                            "use"
                                             "use_when_creating"]}}))))))
