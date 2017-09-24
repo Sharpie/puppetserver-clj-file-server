@@ -13,7 +13,7 @@
 
   :plugins [[lein-parent "0.3.1"]]
 
-  :parent-project {:coords [puppetlabs/clj-parent "1.3.2"]
+  :parent-project {:coords [puppetlabs/clj-parent "1.2.1"]
                    :inherit [:managed-dependencies]}
 
   :source-paths ["src/clj"]
