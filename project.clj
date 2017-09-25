@@ -2,7 +2,7 @@
   "Version of Puppet Server to develop and test against"
   "5.0.0")
 
-(defproject puppetserver/clj-file-server "0.3.0-SNAPSHOT"
+(defproject puppetserver/clj-file-server "0.2.1"
   :description "Prototype file server service for Puppet Server"
   :license {:name "Apache License 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0.html"}

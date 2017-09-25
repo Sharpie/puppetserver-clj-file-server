@@ -1,6 +1,6 @@
 {
   "name": "sharpie-clj_file_server",
-  "version": "0.3.0",
+  "version": "0.2.1",
   "author": "Charlie Sharpsteen",
   "summary": "Install a protopype file server service for Puppet Server",
   "license": "Apache-2.0",

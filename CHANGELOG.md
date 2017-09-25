@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+
+## [0.2.1] - 2017-09-24
 ### Fixed
 
   - Puppet module is now compatible with PE 2017.3.0 and uses the
@@ -55,6 +57,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     Puppet Enterprise installation.
 
 
-[Unreleased]: https://github.com/Sharpie/puppetserver-clj-file-server/compare/0.2.0...HEAD
+[Unreleased]: https://github.com/Sharpie/puppetserver-clj-file-server/compare/0.2.1...HEAD
+[0.2.1]: https://github.com/Sharpie/puppetserver-clj-file-server/compare/0.2.0...0.2.1
 [0.2.0]: https://github.com/Sharpie/puppetserver-clj-file-server/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/Sharpie/puppetserver-clj-file-server/compare/af3604d...0.1.0
